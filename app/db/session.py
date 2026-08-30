@@ -24,8 +24,8 @@ async def ensure_database_exists():
 
 engine = create_async_engine(
     settings.ASYNC_DATABASE_URI,
-    echo=True,
-    pool_pre_ping=True,
+    echo=False,
+    pool_pre_ping=False,
     pool_size=10,
     max_overflow=20
 )

@@ -1,21 +1,20 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, status
-from app.db.session import engine, Base, ensure_database_exists
-import app.models.telemetry  # Tabloları SQLAlchemy'ye tanıtmak için
+from fastapi import FastAPI, Depends, status
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.db.session import engine, Base, ensure_database_exists, get_db
+import app.models.telemetry
 from app.schemas.telemetry import TelemetryPayload
+from app.services.telemetry_service import save_telemetry_data
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # 1. Önce DB'nin var olduğundan emin ol
     await ensure_database_exists()
-    
-    # 2. Tabloları oluştur
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     print("🚀 [DATABASE] Tüm tablolar başarıyla oluşturuldu / senkronize edildi.")
     yield
-    # SHUTDOWN
     await engine.dispose()
     print("🛑 [DATABASE] Veritabanı bağlantı havuzu kapatıldı.")
 
@@ -35,9 +34,16 @@ async def root():
         "version": "1.0.0"
     }
 
-@app.post("/api/v1/telemetry/validate", status_code=status.HTTP_200_OK)
-async def validate_telemetry(payload: TelemetryPayload):
+@app.post("/api/v1/telemetry/ingest", status_code=status.HTTP_201_CREATED)
+async def ingest_telemetry(payload: TelemetryPayload, db: AsyncSession = Depends(get_db)):
+    """
+    Gelen telemetri paketini doğrular ve MySQL veritabanına kalıcı olarak kaydeder.
+    """
+    record = await save_telemetry_data(payload=payload, db=db)
     return {
-        "message": "Telemetri paketi başarıyla doğrulandı.",
-        "received_data": payload
+        "message": "Telemetri verisi başarıyla kaydedildi.",
+        "log_id": record.id,
+        "session_id": record.session_id,
+        "uav_id": payload.uav_id,
+        "status": record.status
     }
