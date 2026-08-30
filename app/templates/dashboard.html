@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>İHA Yer Kontrol İstasyonu (GCS) - Canlı Filo Telemetri</title>
+    
+    <!-- Leaflet.js Harita CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Google Fonts & Font Awesome -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0b0f19;
+            color: #e2e8f0;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Üst Başlık & Durum Çubuğu */
+        header {
+            background-color: #111827;
+            border-bottom: 1px solid #1f2937;
+            padding: 10px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #38bdf8;
+            letter-spacing: 0.5px;
+        }
+
+        .connection-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.8rem;
+            font-family: 'JetBrains Mono', monospace;
+            padding: 5px 12px;
+            border-radius: 9999px;
+            background-color: rgba(239, 68, 68, 0.15);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .connection-badge.connected {
+            background-color: rgba(34, 197, 94, 0.15);
+            color: #22c55e;
+            border-color: rgba(34, 197, 94, 0.3);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: currentColor;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(0.9); }
+        }
+
+        /* Ana Gövde: Sol Liste | Harita | Sağ Telemetri */
+        .main-container {
+            display: grid;
+            grid-template-columns: 260px 1fr 320px;
+            flex: 1;
+            height: calc(100vh - 53px);
+            position: relative;
+        }
+
+        /* Sol Aktif Filo Listesi */
+        .fleet-sidebar {
+            background-color: #111827;
+            border-right: 1px solid #1f2937;
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            overflow-y: auto;
+            z-index: 1000;
+        }
+
+        .fleet-sidebar h3 {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #94a3b8;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .fleet-item {
+            background-color: #1a2234;
+            border: 1px solid #2d3748;
+            border-radius: 8px;
+            padding: 10px 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .fleet-item:hover, .fleet-item.active {
+            border-color: #38bdf8;
+            background-color: #1e293b;
+        }
+
+        .fleet-item.active {
+            box-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
+        }
+
+        .fleet-name {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #f8fafc;
+        }
+
+        .fleet-alt {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: #38bdf8;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+            background: #0b0f19;
+        }
+
+        /* Sağ Telemetri Paneli */
+        .telemetry-sidebar {
+            background-color: #111827;
+            border-left: 1px solid #1f2937;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            overflow-y: auto;
+            z-index: 1000;
+        }
+
+        .card {
+            background-color: #1a2234;
+            border: 1px solid #2d3748;
+            border-radius: 8px;
+            padding: 12px 14px;
+        }
+
+        .card-header {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #94a3b8;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .card-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #f8fafc;
+            display: flex;
+            align-items: baseline;
+            gap: 4px;
+        }
+
+        .card-unit {
+            font-size: 0.8rem;
+            font-weight: 400;
+            color: #64748b;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .battery-bar-container {
+            width: 100%;
+            height: 6px;
+            background-color: #334155;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+
+        .battery-bar-fill {
+            height: 100%;
+            width: 0%;
+            background-color: #22c55e;
+            transition: width 0.3s ease, background-color 0.3s ease;
+        }
+
+        /* Harita Karanlık Mod Katmanı */
+        .dark-tiles {
+            filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7);
+        }
+
+        .plane-label {
+            background: rgba(15, 23, 42, 0.9) !important;
+            border: 1px solid #38bdf8 !important;
+            color: #38bdf8 !important;
+            font-family: 'JetBrains Mono', monospace !important;
+            font-size: 10px !important;
+            padding: 1px 4px !important;
+            border-radius: 4px !important;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-title">
+            <i class="fa-solid fa-satellite-dish"></i>
+            <span>İHA HAREKÂT MERKEZİ (GCS)</span>
+        </div>
+        <div id="connection-status" class="connection-badge">
+            <span class="status-dot"></span>
+            <span id="connection-text">BAĞLANTI BEKLENİYOR</span>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <!-- Sol: Aktif Filo Listesi -->
+        <div class="fleet-sidebar">
+            <h3><i class="fa-solid fa-satellite"></i> AKTİF HAVA SAHASI (<span id="fleet-count">0</span>)</h3>
+            <div id="fleet-items-list" style="display: flex; flex-direction: column; gap: 6px;"></div>
+        </div>
+
+        <!-- Orta: Harita -->
+        <div id="map"></div>
+
+        <!-- Sağ: Seçili İHA Telemetri Paneli -->
+        <div class="telemetry-sidebar">
+            <div class="card">
+                <div class="card-header"><i class="fa-solid fa-crosshairs"></i> SEÇİLİ HAVA ARACI</div>
+                <div class="card-value" id="val-uav-id" style="font-size: 1.1rem; color: #38bdf8;">Bekleniyor...</div>
+            </div>
+
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-header"><i class="fa-solid fa-arrows-up-to-line"></i> İRTİFA</div>
+                    <div class="card-value"><span id="val-altitude">--</span><span class="card-unit">m</span></div>
+                </div>
+                <div class="card">
+                    <div class="card-header"><i class="fa-solid fa-gauge-high"></i> YER HIZI</div>
+                    <div class="card-value"><span id="val-speed">--</span><span class="card-unit">m/s</span></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header"><i class="fa-solid fa-battery-half"></i> BATARYA DURUMU</div>
+                <div class="card-value"><span id="val-battery">--</span><span class="card-unit">%</span></div>
+                <div class="battery-bar-container">
+                    <div class="battery-bar-fill" id="battery-progress"></div>
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-header"><i class="fa-solid fa-compass"></i> HEADING</div>
+                    <div class="card-value"><span id="val-heading">--</span><span class="card-unit">°</span></div>
+                </div>
+                <div class="card">
+                    <div class="card-header"><i class="fa-solid fa-temperature-half"></i> SICAKLIK</div>
+                    <div class="card-value"><span id="val-temp">--</span><span class="card-unit">°C</span></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header"><i class="fa-solid fa-location-dot"></i> KOORDİNATLAR</div>
+                <div style="font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: #94a3b8; display: flex; flex-direction: column; gap: 3px;">
+                    <div>LAT: <span id="val-lat" style="color: #f8fafc;">--</span></div>
+                    <div>LON: <span id="val-lon" style="color: #f8fafc;">--</span></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header"><i class="fa-solid fa-clock"></i> SON TELEMETRİ</div>
+                <div id="val-time" style="font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: #64748b;">--</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaflet.js Harita Kütüphanesi -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        // 1. Haritayı Başlat (Marmara Bölgesi)
+        const map = L.map('map').setView([40.7350, 30.0833], 8);
+
+        // Koyu Filtreli OpenStreetMap Katmanı (Filigransız / Ücretsiz)
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap',
+            maxZoom: 19,
+            className: 'dark-tiles'
+        }).addTo(map);
+
+        // Dinamik Filo Veri Havuzu
+        const activeUAVs = {}; // { uav_id: { marker, path, data, lastSeen, color } }
+        let selectedUavId = null;
+
+        // İHA Renk Paleti
+        const colors = ['#38bdf8', '#22c55e', '#f59e0b', '#ec4899', '#a855f7', '#06b6d4', '#eab308', '#10b981'];
+        function getUavColor(uav_id) {
+            let hash = 0;
+            for (let i = 0; i < uav_id.length; i++) hash = uav_id.charCodeAt(i) + ((hash << 5) - hash);
+            return colors[Math.abs(hash) % colors.length];
+        }
+
+        // 2. WebSocket Bağlantısı
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/ws/telemetry`;
+
+        function connectWebSocket() {
+            const socket = new WebSocket(wsUrl);
+            const badge = document.getElementById('connection-status');
+            const statusText = document.getElementById('connection-text');
+
+            socket.onopen = () => {
+                badge.classList.add('connected');
+                statusText.innerText = 'CANLI YAYIN AKTİF';
+            };
+
+            socket.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                handleIncomingTelemetry(data);
+            };
+
+            socket.onclose = () => {
+                badge.classList.remove('connected');
+                statusText.innerText = 'BAĞLANTI KESİLDİ - TEKRAR BAĞLANILIYOR';
+                setTimeout(connectWebSocket, 2000);
+            };
+
+            socket.onerror = (err) => {
+                console.error('WebSocket Hatası:', err);
+                socket.close();
+            };
+        }
+
+        // 3. Gelen Telemetriyi Dinamik Olarak İşle
+        function handleIncomingTelemetry(data) {
+            const id = data.uav_id;
+            const now = Date.now();
+            const latLng = [data.latitude, data.longitude];
+            const color = getUavColor(id);
+
+            // Yeni İHA Keşfedildi (İlk Kez Görülen Araç)
+            if (!activeUAVs[id]) {
+                const path = L.polyline([latLng], {
+                    color: color,
+                    weight: 2,
+                    opacity: 0.8,
+                    dashArray: '3, 6'
+                }).addTo(map);
+
+                const uavIcon = L.divIcon({
+                    className: `uav-icon-${id}`,
+                    html: `<div id="icon-${id}" style="transform: rotate(0deg); transition: transform 0.4s ease; color: ${color}; font-size: 22px; text-shadow: 0 0 8px rgba(0,0,0,0.8);">
+                             <i class="fa-solid fa-jet-fighter"></i>
+                           </div>`,
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+
+                const marker = L.marker(latLng, { icon: uavIcon })
+                    .bindTooltip(id, { permanent: false, className: 'plane-label', direction: 'top' })
+                    .addTo(map)
+                    .on('click', () => selectUav(id));
+
+                activeUAVs[id] = {
+                    marker: marker,
+                    path: path,
+                    data: data,
+                    lastSeen: now,
+                    color: color
+                };
+
+                if (!selectedUavId) selectUav(id);
+                renderFleetList();
+            } else {
+                // Mevcut İHA'nın Konumunu ve Rota İzin Güncelle
+                const uav = activeUAVs[id];
+                uav.data = data;
+                uav.lastSeen = now;
+                uav.marker.setLatLng(latLng);
+                uav.path.addLatLng(latLng);
+
+                const iconElement = document.getElementById(`icon-${id}`);
+                if (iconElement && data.heading !== undefined) {
+                    iconElement.style.transform = `rotate(${data.heading - 45}deg)`;
+                }
+
+                const altBadge = document.getElementById(`alt-badge-${id}`);
+                if (altBadge) altBadge.innerText = `${data.altitude.toFixed(0)}m`;
+            }
+
+            if (selectedUavId === id) {
+                updateSidebarUI(data);
+            }
+        }
+
+        // 4. Sinyal Kaybı Kontrolü (Her 2 saniyede bir kontrol eder, 6 saniye veri gelmeyeni siler)
+        setInterval(() => {
+            const now = Date.now();
+            const timeoutThreshold = 6000;
+            let listChanged = false;
+
+            for (const [id, uav] of Object.entries(activeUAVs)) {
+                if (now - uav.lastSeen > timeoutThreshold) {
+                    map.removeLayer(uav.marker);
+                    map.removeLayer(uav.path);
+                    delete activeUAVs[id];
+                    listChanged = true;
+
+                    if (selectedUavId === id) {
+                        selectedUavId = Object.keys(activeUAVs)[0] || null;
+                        if (selectedUavId) selectUav(selectedUavId);
+                        else clearSidebarUI();
+                    }
+                }
+            }
+
+            if (listChanged) {
+                renderFleetList();
+            }
+        }, 2000);
+
+        function renderFleetList() {
+            const listContainer = document.getElementById('fleet-items-list');
+            const uavIds = Object.keys(activeUAVs);
+            document.getElementById('fleet-count').innerText = uavIds.length;
+
+            listContainer.innerHTML = '';
+            uavIds.sort().forEach(id => {
+                const uav = activeUAVs[id];
+                const item = document.createElement('div');
+                item.className = `fleet-item ${selectedUavId === id ? 'active' : ''}`;
+                item.id = `fleet-item-${id}`;
+                item.onclick = () => selectUav(id);
+
+                item.innerHTML = `
+                    <div class="fleet-name" style="color: ${uav.color};">
+                        <i class="fa-solid fa-plane" style="font-size: 11px;"></i> ${id}
+                    </div>
+                    <div class="fleet-alt" id="alt-badge-${id}">${uav.data.altitude.toFixed(0)}m</div>
+                `;
+                listContainer.appendChild(item);
+            });
+        }
+
+        function selectUav(id) {
+            if (!activeUAVs[id]) return;
+            selectedUavId = id;
+            document.querySelectorAll('.fleet-item').forEach(el => el.classList.remove('active'));
+            const activeItem = document.getElementById(`fleet-item-${id}`);
+            if (activeItem) activeItem.classList.add('active');
+
+            updateSidebarUI(activeUAVs[id].data);
+            map.panTo([activeUAVs[id].data.latitude, activeUAVs[id].data.longitude], { animate: true, duration: 0.6 });
+        }
+
+        function updateSidebarUI(data) {
+            document.getElementById('val-uav-id').innerText = data.uav_id;
+            document.getElementById('val-altitude').innerText = data.altitude !== undefined ? data.altitude.toFixed(1) : '--';
+            document.getElementById('val-speed').innerText = data.speed !== undefined ? data.speed.toFixed(1) : '--';
+            document.getElementById('val-battery').innerText = data.battery !== undefined ? data.battery.toFixed(1) : '--';
+            document.getElementById('val-heading').innerText = data.heading !== undefined ? data.heading.toFixed(0) : '--';
+            document.getElementById('val-temp').innerText = data.temperature !== undefined ? data.temperature.toFixed(1) : '--';
+            document.getElementById('val-lat').innerText = data.latitude !== undefined ? data.latitude.toFixed(6) : '--';
+            document.getElementById('val-lon').innerText = data.longitude !== undefined ? data.longitude.toFixed(6) : '--';
+            document.getElementById('val-time').innerText = new Date(data.timestamp).toLocaleTimeString();
+
+            const batteryFill = document.getElementById('battery-progress');
+            batteryFill.style.width = `${data.battery}%`;
+            if (data.battery < 20) batteryFill.style.backgroundColor = '#ef4444';
+            else if (data.battery < 50) batteryFill.style.backgroundColor = '#f59e0b';
+            else batteryFill.style.backgroundColor = '#22c55e';
+        }
+
+        function clearSidebarUI() {
+            document.getElementById('val-uav-id').innerText = 'Hava Aracı Yok';
+            document.getElementById('val-altitude').innerText = '--';
+            document.getElementById('val-speed').innerText = '--';
+            document.getElementById('val-battery').innerText = '--';
+            document.getElementById('val-heading').innerText = '--';
+            document.getElementById('val-temp').innerText = '--';
+            document.getElementById('val-lat').innerText = '--';
+            document.getElementById('val-lon').innerText = '--';
+            document.getElementById('val-time').innerText = '--';
+            document.getElementById('battery-progress').style.width = '0%';
+        }
+
+        connectWebSocket();
+    </script>
+</body>
+</html>
