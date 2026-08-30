@@ -6,11 +6,17 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "UAV Telemetry & Analytics System"
     API_V1_STR: str = "/api/v1"
 
+    # MySQL Ayarları
     MYSQL_SERVER: str = "127.0.0.1"
     MYSQL_PORT: int = 3306
     MYSQL_USER: str = "root"
     MYSQL_PASSWORD: str = ""
     MYSQL_DB: str = "uav_telemetry_db"
+
+    # MQTT Broker Ayarları
+    MQTT_BROKER_HOST: str = "127.0.0.1"
+    MQTT_BROKER_PORT: int = 1883
+    MQTT_TELEMETRY_TOPIC: str = "telemetry/+/data"
 
     @property
     def ASYNC_DATABASE_URI(self) -> str:
