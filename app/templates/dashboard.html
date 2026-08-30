@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>İHA Yer Kontrol İstasyonu (GCS) - Canlı Filo Telemetri</title>
+    <title>İHA Filo Harekât & Güvenlik Merkezi (GCS C2 & Safety)</title>
     
     <!-- Leaflet.js Harita CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -87,7 +87,7 @@
         /* Ana Gövde: Sol Liste | Harita | Sağ Telemetri */
         .main-container {
             display: grid;
-            grid-template-columns: 260px 1fr 320px;
+            grid-template-columns: 260px 1fr 340px;
             flex: 1;
             height: calc(100vh - 53px);
             position: relative;
@@ -136,6 +136,17 @@
             box-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
         }
 
+        .fleet-item.has-alert {
+            border-color: #ef4444 !important;
+            background-color: rgba(239, 68, 68, 0.15) !important;
+            animation: borderPulse 1s infinite alternate;
+        }
+
+        @keyframes borderPulse {
+            from { box-shadow: 0 0 4px rgba(239, 68, 68, 0.4); }
+            to { box-shadow: 0 0 12px rgba(239, 68, 68, 0.8); }
+        }
+
         .fleet-name {
             font-family: 'JetBrains Mono', monospace;
             font-size: 0.85rem;
@@ -155,7 +166,7 @@
             background: #0b0f19;
         }
 
-        /* Sağ Telemetri Paneli */
+        /* Sağ Telemetri ve Alarm Paneli */
         .telemetry-sidebar {
             background-color: #111827;
             border-left: 1px solid #1f2937;
@@ -187,7 +198,7 @@
 
         .card-value {
             font-family: 'JetBrains Mono', monospace;
-            font-size: 1.4rem;
+            font-size: 1.35rem;
             font-weight: 700;
             color: #f8fafc;
             display: flex;
@@ -223,6 +234,34 @@
             transition: width 0.3s ease, background-color 0.3s ease;
         }
 
+        /* Canlı Alarmlar Akışı */
+        .alert-box {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 180px;
+            overflow-y: auto;
+        }
+
+        .alert-card {
+            background-color: rgba(239, 68, 68, 0.12);
+            border-left: 3px solid #ef4444;
+            padding: 8px 10px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .alert-card.warning {
+            background-color: rgba(245, 158, 11, 0.12);
+            border-left-color: #f59e0b;
+        }
+
+        .alert-time {
+            font-size: 0.65rem;
+            color: #94a3b8;
+        }
+
         /* Harita Karanlık Mod Katmanı */
         .dark-tiles {
             filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7);
@@ -243,8 +282,8 @@
 
     <header>
         <div class="header-title">
-            <i class="fa-solid fa-satellite-dish"></i>
-            <span>İHA HAREKÂT MERKEZİ (GCS)</span>
+            <i class="fa-solid fa-shield-halved"></i>
+            <span>İHA GÜVENLİK & HAREKÂT MERKEZİ (GCS C2)</span>
         </div>
         <div id="connection-status" class="connection-badge">
             <span class="status-dot"></span>
@@ -259,10 +298,10 @@
             <div id="fleet-items-list" style="display: flex; flex-direction: column; gap: 6px;"></div>
         </div>
 
-        <!-- Orta: Harita -->
+        <!-- Orta: Canlı Harita -->
         <div id="map"></div>
 
-        <!-- Sağ: Seçili İHA Telemetri Paneli -->
+        <!-- Sağ: Telemetri & Alarmlar -->
         <div class="telemetry-sidebar">
             <div class="card">
                 <div class="card-header"><i class="fa-solid fa-crosshairs"></i> SEÇİLİ HAVA ARACI</div>
@@ -307,9 +346,12 @@
                 </div>
             </div>
 
-            <div class="card">
-                <div class="card-header"><i class="fa-solid fa-clock"></i> SON TELEMETRİ</div>
-                <div id="val-time" style="font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: #64748b;">--</div>
+            <!-- Canlı Anomali & Alarm Paneli -->
+            <div class="card" style="flex: 1; display: flex; flex-direction: column;">
+                <div class="card-header" style="color: #ef4444;"><i class="fa-solid fa-triangle-exclamation"></i> GÜVENLİK & İHLAL ALARMLARI</div>
+                <div class="alert-box" id="alerts-container">
+                    <div style="font-size: 0.75rem; color: #64748b; text-align: center; margin-top: 10px;">Henüz aktif alarm yok.</div>
+                </div>
             </div>
         </div>
     </div>
@@ -318,7 +360,7 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <script>
-        // 1. Haritayı Başlat (Marmara Bölgesi)
+        // 1. Haritayı Başlat (Kocaeli Merkez)
         const map = L.map('map').setView([40.7350, 30.0833], 8);
 
         // Koyu Filtreli OpenStreetMap Katmanı (Filigransız / Ücretsiz)
@@ -328,8 +370,20 @@
             className: 'dark-tiles'
         }).addTo(map);
 
+        // 2. Geofence Sınır Çemberi (45 KM Yarıçap)
+        const geofenceCircle = L.circle([40.7350, 30.0833], {
+            radius: 45000, // 45 km
+            color: '#38bdf8',
+            weight: 2,
+            dashArray: '6, 8',
+            fillColor: '#38bdf8',
+            fillOpacity: 0.05
+        }).addTo(map);
+
+        geofenceCircle.bindTooltip("GEOFENCE GÜVENLİ UÇUŞ KORİDORU (45 KM)", { permanent: false, direction: 'center' });
+
         // Dinamik Filo Veri Havuzu
-        const activeUAVs = {}; // { uav_id: { marker, path, data, lastSeen, color } }
+        const activeUAVs = {}; // { uav_id: { marker, path, data, lastSeen, color, hasAlert } }
         let selectedUavId = null;
 
         // İHA Renk Paleti
@@ -340,7 +394,7 @@
             return colors[Math.abs(hash) % colors.length];
         }
 
-        // 2. WebSocket Bağlantısı
+        // 3. WebSocket Bağlantısı
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const wsUrl = `${protocol}//${window.location.host}/ws/telemetry`;
 
@@ -351,12 +405,16 @@
 
             socket.onopen = () => {
                 badge.classList.add('connected');
-                statusText.innerText = 'CANLI YAYIN AKTİF';
+                statusText.innerText = 'CANLI RADAR & GÜVENLİK AKTİF';
             };
 
             socket.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-                handleIncomingTelemetry(data);
+                const packet = JSON.parse(event.data);
+                if (packet.type === "TELEMETRY" || (packet.uav_id && !packet.type)) {
+                    handleIncomingTelemetry(packet);
+                } else if (packet.type === "ALERT") {
+                    handleIncomingAlert(packet);
+                }
             };
 
             socket.onclose = () => {
@@ -371,14 +429,14 @@
             };
         }
 
-        // 3. Gelen Telemetriyi Dinamik Olarak İşle
+        // 4. Gelen Telemetriyi Dinamik Olarak İşle
         function handleIncomingTelemetry(data) {
             const id = data.uav_id;
             const now = Date.now();
             const latLng = [data.latitude, data.longitude];
             const color = getUavColor(id);
 
-            // Yeni İHA Keşfedildi (İlk Kez Görülen Araç)
+            // Yeni İHA Keşfedildi
             if (!activeUAVs[id]) {
                 const path = L.polyline([latLng], {
                     color: color,
@@ -406,7 +464,8 @@
                     path: path,
                     data: data,
                     lastSeen: now,
-                    color: color
+                    color: color,
+                    hasAlert: data.has_alert || false
                 };
 
                 if (!selectedUavId) selectUav(id);
@@ -418,6 +477,7 @@
                 uav.lastSeen = now;
                 uav.marker.setLatLng(latLng);
                 uav.path.addLatLng(latLng);
+                uav.hasAlert = data.has_alert || false;
 
                 const iconElement = document.getElementById(`icon-${id}`);
                 if (iconElement && data.heading !== undefined) {
@@ -433,14 +493,37 @@
             }
         }
 
-        // 4. Sinyal Kaybı Kontrolü (Her 2 saniyede bir kontrol eder, 6 saniye veri gelmeyeni siler)
+        // 5. Gelen Alarm Paketlerini Yakala ve Arayüze Ekle
+        function handleIncomingAlert(alert) {
+            const container = document.getElementById('alerts-container');
+            if (container.children.length === 1 && container.innerText.includes("Henüz")) {
+                container.innerHTML = '';
+            }
+
+            const alertCard = document.createElement('div');
+            alertCard.className = `alert-card ${alert.severity === 'WARNING' ? 'warning' : ''}`;
+            alertCard.innerHTML = `
+                <div style="display: flex; justify-content: space-between; font-weight: 700;">
+                    <span>[${alert.alert_type}] ${alert.uav_id}</span>
+                    <span class="alert-time">${new Date(alert.timestamp).toLocaleTimeString()}</span>
+                </div>
+                <div style="margin-top: 3px; color: #f8fafc;">${alert.message}</div>
+            `;
+
+            container.prepend(alertCard);
+            if (container.children.length > 10) container.removeChild(container.lastChild);
+
+            const item = document.getElementById(`fleet-item-${alert.uav_id}`);
+            if (item) item.classList.add('has-alert');
+        }
+
+        // 6. Sinyal Kaybı Kontrolü (6 saniye veri gelmeyeni siler)
         setInterval(() => {
             const now = Date.now();
-            const timeoutThreshold = 6000;
             let listChanged = false;
 
             for (const [id, uav] of Object.entries(activeUAVs)) {
-                if (now - uav.lastSeen > timeoutThreshold) {
+                if (now - uav.lastSeen > 6000) {
                     map.removeLayer(uav.marker);
                     map.removeLayer(uav.path);
                     delete activeUAVs[id];
@@ -468,7 +551,7 @@
             uavIds.sort().forEach(id => {
                 const uav = activeUAVs[id];
                 const item = document.createElement('div');
-                item.className = `fleet-item ${selectedUavId === id ? 'active' : ''}`;
+                item.className = `fleet-item ${selectedUavId === id ? 'active' : ''} ${uav.hasAlert ? 'has-alert' : ''}`;
                 item.id = `fleet-item-${id}`;
                 item.onclick = () => selectUav(id);
 
@@ -502,7 +585,6 @@
             document.getElementById('val-temp').innerText = data.temperature !== undefined ? data.temperature.toFixed(1) : '--';
             document.getElementById('val-lat').innerText = data.latitude !== undefined ? data.latitude.toFixed(6) : '--';
             document.getElementById('val-lon').innerText = data.longitude !== undefined ? data.longitude.toFixed(6) : '--';
-            document.getElementById('val-time').innerText = new Date(data.timestamp).toLocaleTimeString();
 
             const batteryFill = document.getElementById('battery-progress');
             batteryFill.style.width = `${data.battery}%`;
@@ -520,7 +602,6 @@
             document.getElementById('val-temp').innerText = '--';
             document.getElementById('val-lat').innerText = '--';
             document.getElementById('val-lon').innerText = '--';
-            document.getElementById('val-time').innerText = '--';
             document.getElementById('battery-progress').style.width = '0%';
         }
 

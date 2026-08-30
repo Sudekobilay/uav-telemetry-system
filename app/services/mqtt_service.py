@@ -6,13 +6,14 @@ from app.db.session import AsyncSessionLocal
 from app.schemas.telemetry import TelemetryPayload
 from app.services.telemetry_service import save_telemetry_data
 from app.services.websocket_manager import ws_manager
+from app.services.anomaly_service import evaluate_flight_safety
 
 
 async def start_mqtt_listener():
     """
     FastAPI yaşam döngüsünde arka planda çalışan MQTT Subscriber.
     Broker üzerindeki 'telemetry/+/data' kanalını dinler,
-    veriyi MySQL'e kaydeder ve WebSocket ile bağlı tüm haritalara anında dağıtır.
+    veriyi MySQL'e kaydeder, anomali/geofence denetimi yapar ve WebSocket ile yayınlar.
     """
     print(f"📡 [MQTT SUBSCRIBER] Broker'a bağlanılıyor -> {settings.MQTT_BROKER_HOST}:{settings.MQTT_BROKER_PORT}")
     
@@ -30,17 +31,39 @@ async def start_mqtt_listener():
                         # 2. Pydantic şeması ile doğrula
                         telemetry_payload = TelemetryPayload(**payload_dict)
 
-                        # 3. Asenkron DB oturumu açıp MySQL'e kaydet
+                        # 3. Asenkron DB oturumu açıp kaydet ve güvenlik denetiminden geçir
                         async with AsyncSessionLocal() as db_session:
                             saved_record = await save_telemetry_data(payload=telemetry_payload, db=db_session)
-                        
-                        # 4. WebSocket üzerinden bağlı tüm istemcilere (Harita / Dashboard) canlı ilet
+                            
+                            # Uçuş Güvenliği & Geofence & Kritik Eşik Kontrolü
+                            detected_alerts = await evaluate_flight_safety(
+                                payload=telemetry_payload,
+                                session_id=saved_record.session_id,
+                                db=db_session
+                            )
+
+                        # 4. WebSocket üzerinden telemetri verisini yayınla
                         broadcast_data = telemetry_payload.model_dump()
+                        broadcast_data["type"] = "TELEMETRY"
                         broadcast_data["timestamp"] = broadcast_data["timestamp"].isoformat()
                         broadcast_data["log_id"] = saved_record.id
+                        broadcast_data["has_alert"] = len(detected_alerts) > 0
                         await ws_manager.broadcast(broadcast_data)
 
-                        print(f"📥 [MQTT RECV & WS BROADCAST] İHA: {telemetry_payload.uav_id} | Log ID: {saved_record.id} | İrtifa: {telemetry_payload.altitude}m | Batarya: %{telemetry_payload.battery}")
+                        # 5. Kural ihlali (alarm) varsa WebSocket üzerinden fırlat
+                        for alert in detected_alerts:
+                            alert_payload = {
+                                "type": "ALERT",
+                                "uav_id": alert["uav_id"],
+                                "alert_type": alert["alert_type"],
+                                "severity": alert["severity"],
+                                "message": alert["message"],
+                                "timestamp": broadcast_data["timestamp"]
+                            }
+                            await ws_manager.broadcast(alert_payload)
+                            print(f"🚨 [ALARM ÜRETİLDİ] {alert['severity']} -> {alert['uav_id']}: {alert['message']}")
+
+                        print(f"📥 [MQTT RECV & BROADCAST] İHA: {telemetry_payload.uav_id} | Log ID: {saved_record.id} | İrtifa: {telemetry_payload.altitude}m | Batarya: %{telemetry_payload.battery}")
 
                     except json.JSONDecodeError:
                         print("⚠️ [MQTT HATA] Geçersiz JSON paketi alındı.")
