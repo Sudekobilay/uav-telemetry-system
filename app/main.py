@@ -1,15 +1,17 @@
 import asyncio
 import os
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Depends, WebSocket, WebSocketDisconnect, status
+from fastapi import FastAPI, Depends, WebSocket, WebSocketDisconnect, status, HTTPException
 from fastapi.responses import HTMLResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import engine, Base, ensure_database_exists, get_db
 import app.models.telemetry
 from app.schemas.telemetry import TelemetryPayload
-from app.services.telemetry_service import save_telemetry_data
+from app.schemas.command import TelecommandPayload
+from app.services.telemetry_service import save_telemetry_data, get_flight_replay_data
 from app.services.mqtt_service import start_mqtt_listener
+from app.services.command_service import dispatch_telecommand
 from app.services.websocket_manager import ws_manager
 
 
@@ -62,6 +64,60 @@ async def ingest_telemetry(payload: TelemetryPayload, db: AsyncSession = Depends
         "session_id": record.session_id,
         "uav_id": payload.uav_id,
         "status": record.status
+    }
+
+
+@app.post("/api/v1/commands/send", status_code=status.HTTP_200_OK)
+async def send_telecommand(command: TelecommandPayload):
+    """
+    GCS üzerinden İHA'ya C2 Telekomut (RTH, LOITER, LAND vb.) fırlatır (Uplink).
+    """
+    success = await dispatch_telecommand(command)
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"{command.uav_id} için komut MQTT hattına iletilemedi."
+        )
+    return {
+        "status": "DISPATCHED",
+        "uav_id": command.uav_id,
+        "command": command.command_type.value,
+        "message": f"{command.command_type.value} komutu İHA'ya başarıyla iletildi."
+    }
+
+
+@app.get("/api/v1/telemetry/replay/{session_code}", status_code=status.HTTP_200_OK)
+async def replay_flight_session(session_code: str, db: AsyncSession = Depends(get_db)):
+    """
+    Geçmiş bir uçuş oturumunun tüm telemetri kayıtlarını zaman sıralı çeker (Kara Kutu Analizi).
+    """
+    logs = await get_flight_replay_data(session_code=session_code, db=db)
+    if not logs:
+        return {
+            "message": "Uçuş oturumu bulunamadı veya telemetri kaydı yok.",
+            "session_code": session_code,
+            "total_packets": 0,
+            "telemetry": []
+        }
+    
+    return {
+        "session_code": session_code,
+        "total_packets": len(logs),
+        "telemetry": [
+            {
+                "id": log.id,
+                "timestamp": log.timestamp.isoformat(),
+                "latitude": log.latitude,
+                "longitude": log.longitude,
+                "altitude": log.altitude,
+                "speed": log.speed,
+                "battery": log.battery,
+                "temperature": log.temperature,
+                "heading": log.heading,
+                "status": log.status
+            }
+            for log in logs
+        ]
     }
 
 

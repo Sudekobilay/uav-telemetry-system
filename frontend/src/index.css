@@ -1,0 +1,54 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+:root {
+  --bg-base: #0a0c10;
+  --bg-panel: #0f131a;
+  --bg-card: #151a24;
+  --bg-card-inner: #0d1117;
+  --bg-hover: #1c2330;
+  --bg-selected: #242e3f;
+  --border: #1e2633;
+  --border-light: #2c374a;
+  --text-main: #b2bac2;
+  --text-white: #e6edf3;
+  --text-dim: #606d7d;
+  --c-blue: #6c94b8;
+  --c-sand: #b89c68;
+  --c-red: #9e4444;
+  --c-green: #488255;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-base);
+  color: var(--text-main);
+  font-family: 'Inter', sans-serif;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* Harita Kapsayıcısı */
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+  background: #000 !important;
+}
+
+/* Özel İnce Scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-card-inner);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-light);
+  border-radius: 2px;
+}

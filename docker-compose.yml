@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  # 1. MySQL Veritabanı
+  db:
+    image: mysql:8.0
+    container_name: uav_mysql_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: uav_telemetry_db
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - uav_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 2. Eclipse Mosquitto MQTT Broker
+  mqtt-broker:
+    image: eclipse-mosquitto:2.0
+    container_name: uav_mqtt_broker
+    restart: always
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./mosquitto/config:/mosquitto/config
+      - ./mosquitto/data:/mosquitto/data
+      - ./mosquitto/log:/mosquitto/log
+    networks:
+      - uav_network
+
+  # 3. FastAPI Telemetri ve Yer Kontrol İstasyonu Sunucusu
+  backend:
+    build: .
+    container_name: uav_backend_api
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+      mqtt-broker:
+        condition: service_started
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=mysql+aiomysql://root:rootpassword@db:3306/uav_telemetry_db
+      - MQTT_BROKER_HOST=mqtt-broker
+      - MQTT_BROKER_PORT=1883
+    networks:
+      - uav_network
+
+networks:
+  uav_network:
+    driver: bridge
+
+volumes:
+  mysql_data:

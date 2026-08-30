@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from typing import List, Sequence
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.models.telemetry import UAV, FlightSession, TelemetryLog, FlightStatus
@@ -6,6 +7,10 @@ from app.schemas.telemetry import TelemetryPayload
 
 
 async def save_telemetry_data(payload: TelemetryPayload, db: AsyncSession) -> TelemetryLog:
+    """
+    Gelen telemetri paketini doğrular, İHA ve aktif uçuş oturumunu bulur/oluşturur,
+    ardından telemetri kaydını veritabanına işler.
+    """
     # 1. İHA kontrolü
     stmt_uav = select(UAV).where(UAV.uav_id == payload.uav_id)
     result_uav = await db.execute(stmt_uav)
@@ -19,7 +24,7 @@ async def save_telemetry_data(payload: TelemetryPayload, db: AsyncSession) -> Te
     # 2. Aktif uçuş oturumu kontrolü
     stmt_session = select(FlightSession).where(
         FlightSession.uav_id == payload.uav_id,
-        FlightSession.status == FlightStatus.IN_FLIGHT
+        FlightSession.status == FlightStatus.IN_FLIGHT.value
     ).order_by(FlightSession.id.desc())
     
     result_session = await db.execute(stmt_session)
@@ -30,7 +35,7 @@ async def save_telemetry_data(payload: TelemetryPayload, db: AsyncSession) -> Te
         flight_session = FlightSession(
             session_code=session_code,
             uav_id=payload.uav_id,
-            status=FlightStatus.IN_FLIGHT
+            status=FlightStatus.IN_FLIGHT.value
         )
         db.add(flight_session)
         await db.flush()
@@ -58,3 +63,19 @@ async def save_telemetry_data(payload: TelemetryPayload, db: AsyncSession) -> Te
     await db.commit()
 
     return telemetry_record
+
+
+async def get_flight_replay_data(session_code: str, db: AsyncSession) -> Sequence[TelemetryLog]:
+    """
+    Belirli bir uçuş oturumuna (session_code) ait tüm telemetri kayıtlarını
+    kara kutudan (veritabanından) zaman damgasına göre sıralı olarak getirir.
+    """
+    stmt = (
+        select(TelemetryLog)
+        .join(FlightSession, TelemetryLog.session_id == FlightSession.id)
+        .where(FlightSession.session_code == session_code)
+        .order_by(TelemetryLog.timestamp.asc())
+    )
+    result = await db.execute(stmt)
+    logs = result.scalars().all()
+    return logs
