@@ -12,506 +12,100 @@
 
     <style>
         :root {
-            /* Askeri Mat Grafit Renk Paleti (Sıfır Neon, Sıfır Parlama) */
-            --bg-base: #0a0c10;
-            --bg-panel: #0f131a;
-            --bg-card: #151a24;
-            --bg-card-inner: #0d1117;
-            --bg-row-hover: #1c2330;
-            --bg-row-selected: #242e3f;
-            
-            --border: #1e2633;
-            --border-light: #2c374a;
-            
-            --text-main: #b2bac2;
-            --text-white: #e6edf3;
-            --text-dim: #606d7d;
-            
-            /* Taktik Askeri Tonlar (Düşük Doygunluk / Mat) */
-            --c-tactical-blue: #6c94b8;
-            --c-tactical-sand: #b89c68;
-            --c-tactical-red: #9e4444;
-            --c-tactical-green: #488255;
-            --c-tactical-cyan: #568ea6;
+            --bg-base: #10141d;
+            --bg-panel: #161c27;
+            --bg-card: #1e2636;
+            --bg-card-inner: #121822;
+            --border: #2a364a;
+            --border-light: #3b4c68;
+            --text-main: #c9d1d9;
+            --text-white: #f0f6fc;
+            --text-dim: #8b949e;
+            --c-blue: #58a6ff;
+            --c-sand: #d29922;
+            --c-red: #f85149;
+            --c-green: #3fb950;
         }
-
-        * { 
-            margin: 0; 
-            padding: 0; 
-            box-sizing: border-box; 
-            box-shadow: none !important; 
-            text-shadow: none !important; 
-        }
-
-        body {
-            font-family: 'Inter', -apple-system, sans-serif;
-            background-color: var(--bg-base);
-            color: var(--text-main);
-            height: 100vh;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            -webkit-font-smoothing: antialiased;
-        }
-
-        /* --- ÜST BİLGİ PANELİ (HEADER) --- */
-        header {
-            background-color: var(--bg-panel);
-            border-bottom: 1px solid var(--border);
-            padding: 0 16px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            height: 42px;
-            z-index: 1000;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg-base); color: var(--text-main); height: 100vh; overflow: hidden; display: flex; flex-direction: column; user-select: none; }
+        
+        header { background-color: var(--bg-panel); border-bottom: 1px solid var(--border); padding: 0 16px; display: flex; justify-content: space-between; align-items: center; height: 44px; z-index: 1000; box-shadow: 0 2px 6px rgba(0,0,0,0.3); }
         .header-left { display: flex; align-items: center; gap: 10px; }
-        .header-logo { font-size: 0.95rem; color: var(--c-tactical-blue); }
-        .header-titles h1 { font-size: 0.82rem; font-weight: 700; color: var(--text-white); letter-spacing: 0.3px; }
-        .header-titles .subtitle { font-size: 0.58rem; color: var(--text-dim); letter-spacing: 0.5px; font-family: 'JetBrains Mono', monospace; }
+        .header-titles h1 { font-size: 0.85rem; font-weight: 700; color: var(--text-white); letter-spacing: 0.3px; }
+        .header-titles .subtitle { font-size: 0.58rem; color: var(--text-dim); font-family: 'JetBrains Mono', monospace; }
 
-        .header-center {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 0 16px;
-            border-left: 1px solid var(--border);
-            border-right: 1px solid var(--border);
-            height: 55%;
+        .main-container { display: grid; grid-template-columns: 300px 1fr 380px; flex: 1; height: calc(100vh - 44px); }
+        
+        .fleet-sidebar { background-color: var(--bg-panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+        .fleet-header-box { padding: 9px 12px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background-color: #121721; }
+        .fleet-table-head { display: grid; grid-template-columns: 22px 1fr 55px 45px; gap: 6px; padding: 6px 10px; background-color: #1a2230; border-bottom: 1px solid var(--border); font-size: 0.62rem; color: var(--text-dim); font-weight: 700; }
+        .fleet-items-list { flex: 1; overflow-y: auto; }
+        .fleet-row { display: grid; grid-template-columns: 22px 1fr 55px 45px; gap: 6px; padding: 7px 10px; border-bottom: 1px solid #1f2a3c; background-color: var(--bg-card); cursor: pointer; align-items: center; font-size: 0.72rem; }
+        .fleet-row:hover { background-color: #253145; }
+        .fleet-row.active { background-color: #2c3a52 !important; border-left: 3px solid var(--c-sand); }
+        .fleet-row.has-alert { background-color: #3b1c1c !important; border-left: 3px solid var(--c-red); animation: pulse-alert 1.5s infinite; }
+
+        @keyframes pulse-alert {
+            0% { opacity: 1; }
+            50% { opacity: 0.65; }
+            100% { opacity: 1; }
         }
 
-        .tactical-clock {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.88rem;
-            font-weight: 600;
-            color: var(--c-tactical-sand);
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .tactical-clock span.label {
-            font-size: 0.52rem;
-            color: var(--text-dim);
-            border: 1px solid var(--border);
-            padding: 1px 3px;
-            border-radius: 2px;
-        }
-
-        .header-right { display: flex; align-items: center; gap: 12px; }
-        .ping-status { font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; color: var(--text-dim); }
-        .ping-status span { color: var(--c-tactical-green); font-weight: 600; }
-
-        .connection-badge {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 0.65rem;
-            font-family: 'JetBrains Mono', monospace;
-            padding: 3px 8px;
-            border-radius: 2px;
-            background: #1a1212;
-            color: var(--c-tactical-red);
-            border: 1px solid #361f1f;
-            font-weight: 600;
-        }
-        .connection-badge.connected {
-            background: #111a13;
-            color: var(--c-tactical-green);
-            border-color: #1f3323;
-        }
-        .status-dot { width: 5px; height: 5px; border-radius: 50%; background-color: currentColor; }
-
-        /* --- ANA DÜZEN --- */
-        .main-container {
-            display: grid;
-            grid-template-columns: 290px 1fr 370px;
-            flex: 1;
-            height: calc(100vh - 42px);
-        }
-
-        /* --- SOL: FİLO TABLOSU --- */
-        .fleet-sidebar {
-            background-color: var(--bg-panel);
-            border-right: 1px solid var(--border);
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            z-index: 1000;
-        }
-
-        .fleet-header-box {
-            padding: 8px 10px;
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background-color: #0b0e14;
-        }
-        .fleet-header-title { font-size: 0.65rem; color: var(--text-dim); font-weight: 600; }
-        .fleet-header-count { font-size: 0.62rem; color: var(--c-tactical-blue); font-family: 'JetBrains Mono', monospace; font-weight: 600; background: #121721; padding: 1px 5px; border-radius: 2px; border: 1px solid var(--border); }
-
-        .fleet-table-head {
-            display: grid;
-            grid-template-columns: 18px 1fr 55px 40px;
-            gap: 6px;
-            padding: 5px 10px;
-            background-color: #0d1118;
-            border-bottom: 1px solid var(--border);
-            font-size: 0.6rem;
-            color: var(--text-dim);
-            font-weight: 600;
-        }
-
-        .fleet-items-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
-        .fleet-row {
-            display: grid;
-            grid-template-columns: 18px 1fr 55px 40px;
-            gap: 6px;
-            padding: 6px 10px;
-            border-bottom: 1px solid #141a24;
-            background-color: var(--bg-card);
-            cursor: pointer;
-            align-items: center;
-            transition: background-color 0.1s ease;
-        }
-        .fleet-row:nth-child(even) { background-color: #121620; }
-        .fleet-row:hover { background-color: var(--bg-row-hover); }
-        .fleet-row.active { background-color: var(--bg-row-selected) !important; border-left: 2px solid var(--c-tactical-sand); }
-        .fleet-row.active .row-id { color: var(--text-white) !important; font-weight: 600; }
-        .fleet-row.has-alert { background-color: #1c1414 !important; border-left: 2px solid var(--c-tactical-red); }
-
-        .row-icon { font-size: 10px; color: var(--c-tactical-blue); display: flex; align-items: center; justify-content: center; }
-        .row-id { font-size: 0.7rem; font-family: 'JetBrains Mono', monospace; font-weight: 500; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .row-alt { font-size: 0.7rem; font-family: 'JetBrains Mono', monospace; color: var(--text-dim); text-align: right; }
-        .row-status { font-size: 0.58rem; font-family: 'JetBrains Mono', monospace; text-align: center; padding: 1px 3px; border-radius: 2px; background-color: #1a222f; color: var(--c-tactical-blue); font-weight: 600; }
-        .row-status.warn { background-color: #2b1717; color: var(--c-tactical-red); }
-
-        /* --- ORTA: HARİTA --- */
         #map { width: 100%; height: 100%; background: #000; }
-        .leaflet-marker-icon { transition: transform 0.8s linear, top 0.8s linear, left 0.8s linear !important; }
-        .plane-label {
-            background: #0f131a !important;
-            border: 1px solid var(--border) !important;
-            color: var(--c-tactical-blue) !important;
-            font-family: 'JetBrains Mono', monospace !important;
-            font-size: 9px !important;
-            font-weight: 500 !important;
-            padding: 1px 4px !important;
-            border-radius: 2px !important;
-        }
 
-        /* --- SAĞ: MAT TAKTİK PANEL --- */
-        .pfd-sidebar {
-            background-color: var(--bg-panel);
-            border-left: 1px solid var(--border);
-            padding: 8px;
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            overflow-y: auto;
-            z-index: 1000;
-        }
+        .pfd-sidebar { background-color: var(--bg-panel); border-left: 1px solid var(--border); padding: 10px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; }
+        .section-header { font-size: 0.65rem; color: var(--text-dim); font-weight: 700; display: flex; justify-content: space-between; align-items: center; padding-bottom: 4px; border-bottom: 1px solid var(--border); margin-bottom: 6px; }
+        .hud-card { background-color: var(--bg-card); border: 1px solid var(--border); border-radius: 4px; padding: 8px 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        
+        .pfd-container { background-color: var(--bg-card); border: 1px solid var(--border-light); border-radius: 4px; padding: 8px; }
+        .pfd-viewport { width: 100%; height: 155px; border-radius: 3px; overflow: hidden; position: relative; border: 1px solid var(--border); background-color: #121822; }
+        .horizon-disk { width: 550px; height: 550px; position: absolute; top: -190px; left: -85px; }
+        .horizon-sky { height: 275px; background: #1c3153; }
+        .horizon-ground { height: 275px; background: #3b231d; border-top: 1px solid #8b949e; }
+        .tape-gauge { position: absolute; top: 0; bottom: 0; width: 42px; background: rgba(18, 24, 34, 0.95); display: flex; flex-direction: column; justify-content: center; align-items: center; font-family: 'JetBrains Mono', monospace; z-index: 6; border: 1px solid var(--border); }
+        .speed-tape { left: 0; } .alt-tape { right: 0; }
 
-        .section-header {
-            font-size: 0.62rem;
-            color: var(--text-dim);
-            font-weight: 600;
-            letter-spacing: 0.5px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 2px 2px 4px 2px;
-            border-bottom: 1px solid var(--border);
-            margin-bottom: 4px;
-        }
-
-        .hud-card {
-            background-color: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 2px;
-            padding: 6px 8px;
-        }
-
-        /* 1. PRIMARY FLIGHT DISPLAY (PFD) */
-        .pfd-container {
-            background-color: var(--bg-card);
-            border: 1px solid var(--border-light);
-            border-radius: 2px;
-            padding: 6px;
-        }
-
-        .pfd-title-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.68rem;
-            font-weight: 600;
-            color: var(--text-white);
-            margin-bottom: 4px;
-            padding-bottom: 3px;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .pfd-angles {
-            font-size: 0.62rem;
-            color: var(--c-tactical-sand);
-        }
-
-        .pfd-viewport {
-            width: 100%;
-            height: 150px;
-            border-radius: 2px;
-            overflow: hidden;
-            position: relative;
-            border: 1px solid var(--border);
-            background-color: #10151f;
-        }
-
-        .horizon-disk {
-            width: 500px;
-            height: 500px;
-            position: absolute;
-            top: -175px;
-            left: -75px;
-            transform-origin: center center;
-            transition: transform 0.1s linear;
-        }
-
-        /* Mat Havacılık Gökyüzü / Toprak Tonları */
-        .horizon-sky { height: 250px; background: #131d2b; }
-        .horizon-ground { height: 250px; background: #261c16; border-top: 1px solid #707e8c; }
-
-        .roll-arc-svg {
-            position: absolute;
-            top: 2px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 130px;
-            height: 30px;
-            pointer-events: none;
-            z-index: 8;
-        }
-
-        .pfd-pitch-ladder { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
-        .pitch-line { position: absolute; left: 50%; width: 32px; height: 1px; background: rgba(255, 255, 255, 0.4); transform: translateX(-50%); }
-        .pitch-line.major { width: 56px; }
-        .pitch-label { position: absolute; color: rgba(255, 255, 255, 0.55); font-size: 8px; top: -11px; font-family: 'JetBrains Mono', monospace; }
-        .pitch-label.left { left: -16px; }
-        .pitch-label.right { right: -16px; }
-
-        .aircraft-crosshair {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 80px;
-            height: 25px;
-            pointer-events: none;
-            z-index: 10;
-        }
-
-        .tape-gauge {
-            position: absolute;
-            top: 0;
-            bottom: 0;
-            width: 40px;
-            background: rgba(13, 17, 24, 0.94);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            font-family: 'JetBrains Mono', monospace;
-            z-index: 6;
-            border: 1px solid var(--border);
-        }
-        .speed-tape { left: 0; border-right-width: 1px; border-left: none; }
-        .alt-tape { right: 0; border-left-width: 1px; border-right: none; }
-        .tape-label { font-size: 0.48rem; color: var(--text-dim); margin-bottom: 1px; font-weight: 500; }
-        .tape-value { font-size: 0.82rem; font-weight: 700; }
-        .speed-tape .tape-value { color: var(--c-tactical-green); }
-        .alt-tape .tape-value { color: var(--c-tactical-blue); }
-        .tape-unit { font-size: 0.48rem; color: var(--text-dim); }
-
-        /* 2. C2 EYLEM VE KOMUTA PANELİ */
-        .c2-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
-        .c2-btn {
-            padding: 7px 4px;
-            border: 1px solid var(--border);
-            border-radius: 2px;
-            font-family: 'Inter', sans-serif;
-            font-size: 0.65rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: background-color 0.1s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            color: var(--text-main);
-            background-color: var(--bg-card-inner);
-        }
-        .c2-btn:hover { background-color: var(--border); border-color: var(--border-light); }
-        .btn-rth { color: var(--c-tactical-blue); }
-        .btn-loiter { color: var(--c-tactical-sand); }
-        .btn-land { color: var(--c-tactical-red); }
-        .btn-resume { color: var(--c-tactical-green); }
-
-        .c2-status-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background-color: var(--bg-card-inner);
-            padding: 4px 6px;
-            border-radius: 2px;
-            border: 1px solid var(--border);
-            margin-top: 4px;
-            font-size: 0.6rem;
-            font-family: 'JetBrains Mono', monospace;
-        }
-        .c2-status-text { color: var(--text-dim); }
-        .c2-status-val { color: var(--c-tactical-blue); font-weight: 600; }
-
-        /* 3. TELEMETRİ VE PUSULA MATRİSİ */
-        .telemetry-grid {
-            display: grid;
-            grid-template-columns: 80px 1fr;
-            gap: 6px;
-        }
-
-        .compass-box {
-            background-color: var(--bg-card-inner);
-            border: 1px solid var(--border);
-            border-radius: 2px;
-            padding: 4px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .compass-dial {
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
-            border: 1px solid var(--border-light);
-            background: #0b0e14;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-            transition: transform 0.2s linear;
-        }
-        .compass-pointer {
-            width: 0; height: 0;
-            border-left: 3px solid transparent;
-            border-right: 3px solid transparent;
-            border-bottom: 10px solid var(--c-tactical-red);
-            position: absolute; top: 2px;
-        }
-        .compass-deg {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.75rem;
-            font-weight: 600;
-            color: var(--c-tactical-blue);
-            margin-top: 2px;
-        }
-
-        .matrix-box {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 4px;
-        }
-
-        .matrix-cell {
-            background-color: var(--bg-card-inner);
-            border: 1px solid var(--border);
-            border-radius: 2px;
-            padding: 3px 6px;
-        }
-        .matrix-lbl { font-size: 0.52rem; color: var(--text-dim); font-weight: 500; text-transform: uppercase; }
-        .matrix-val {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.78rem;
-            font-weight: 600;
-            color: var(--text-white);
-            margin-top: 1px;
-        }
-
-        .battery-bar-container {
-            width: 100%; height: 3px; background-color: #1b222d;
-            border-radius: 1px; overflow: hidden; margin-top: 3px;
-        }
-        .battery-bar-fill { height: 100%; width: 0%; background-color: var(--c-tactical-green); transition: width 0.3s; }
-
-        /* 4. GÜVENLİK ALARMLARI (Genişletilmiş & İnce Mat Scrollbar) */
-        .alert-box { 
-            display: flex; 
-            flex-direction: column; 
-            gap: 4px; 
-            max-height: 140px; 
-            overflow-y: auto; 
-            padding-right: 2px;
-        }
-
-        .alert-box::-webkit-scrollbar {
-            width: 4px;
-        }
-        .alert-box::-webkit-scrollbar-track {
-            background: #0d1117;
-        }
-        .alert-box::-webkit-scrollbar-thumb {
-            background: #2c374a;
-            border-radius: 2px;
-        }
-
-        .alert-card {
-            background: #171112;
-            border-left: 2px solid var(--c-tactical-red);
-            padding: 5px 8px;
-            border-radius: 2px;
-            font-size: 0.62rem;
-            font-family: 'JetBrains Mono', monospace;
-            line-height: 1.35;
-        }
+        .c2-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+        .c2-btn { padding: 8px 6px; border: 1px solid var(--border); border-radius: 3px; font-size: 0.68rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; color: var(--text-main); background-color: var(--bg-card-inner); }
+        .c2-btn:hover { background-color: #1f2a3c; }
+        
+        .telemetry-grid { display: grid; grid-template-columns: 85px 1fr; gap: 8px; }
+        .compass-box { background-color: var(--bg-card-inner); border: 1px solid var(--border); border-radius: 3px; padding: 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .compass-dial { width: 52px; height: 52px; border-radius: 50%; border: 1px solid var(--border-light); background: #121822; display: flex; align-items: center; justify-content: center; position: relative; }
+        .compass-pointer { width: 0; height: 0; border-left: 3px solid transparent; border-right: 3px solid transparent; border-bottom: 12px solid var(--c-red); position: absolute; top: 3px; }
+        .matrix-box { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+        .matrix-cell { background-color: var(--bg-card-inner); border: 1px solid var(--border); border-radius: 3px; padding: 5px 8px; }
+        
+        .alert-box { display: flex; flex-direction: column; gap: 4px; max-height: 140px; overflow-y: auto; }
+        .alert-card { background: #261717; border-left: 3px solid var(--c-red); padding: 6px 8px; border-radius: 2px; font-size: 0.62rem; font-family: 'JetBrains Mono', monospace; }
     </style>
 </head>
 <body>
-
     <header>
         <div class="header-left">
-            <div class="header-logo"><i class="fa-solid fa-crosshairs"></i></div>
+            <div style="color: var(--c-blue);"><i class="fa-solid fa-crosshairs"></i></div>
             <div class="header-titles">
-                <h1>İHA HAREKÂT KONTROL MERKEZİ</h1>
-                <span class="subtitle">SYS_VER: 2.4.1 | AES-256 C2 LINK</span>
+                <h1>İHA HAREKÂT KONTROL MERKEZİ & TAKTİK C2</h1>
+                <span class="subtitle">SYS_VER: 3.2.0 | SECURE GCS LINK</span>
             </div>
         </div>
-
-        <div class="header-center">
-            <div class="tactical-clock">
-                <i class="fa-regular fa-clock" style="color: var(--text-dim); font-size: 0.75rem;"></i>
-                <span id="top-clock">00:00:00</span>
-                <span class="label">UTC/ZULU</span>
-            </div>
-            <div style="font-size: 0.58rem; color: var(--text-dim); font-weight: 600; font-family: 'JetBrains Mono', monospace;">WGS-84</div>
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; color: var(--c-sand); font-weight: 600;">
+            <span id="top-clock">17:42:14</span> UTC/ZULU
         </div>
-
-        <div class="header-right">
-            <div class="ping-status">PING: <span>14ms</span></div>
-            <div id="connection-status" class="connection-badge">
-                <span class="status-dot"></span>
-                <span id="connection-text">RADAR BEKLENİYOR</span>
+        <div style="display: flex; align-items: center; gap: 15px; font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;">
+            <span style="color: var(--text-dim);">PING: <span style="color: var(--c-green); font-weight: 700;">14ms</span></span>
+            <div style="padding: 4px 10px; border-radius: 3px; background: #172b1c; color: var(--c-green); border: 1px solid #275232; font-weight: 700;">
+                ● C2 & TELEMETRİ AKTİF
             </div>
         </div>
     </header>
 
     <div class="main-container">
-        <!-- SOL: MAT FİLO TABLOSU -->
+        <!-- SOL FİLO -->
         <div class="fleet-sidebar">
             <div class="fleet-header-box">
-                <span class="fleet-header-title">AKTİF HAVA UNSURLARI</span>
-                <span class="fleet-header-count" id="fleet-count">0 ARAÇ</span>
+                <span style="font-size: 0.68rem; color: var(--text-dim); font-weight: 700;">AKTİF HAVA UNSURLARI</span>
+                <span id="fleet-count" style="font-size: 0.65rem; color: var(--c-blue); font-family: 'JetBrains Mono', monospace; font-weight: 700;">0 ARAÇ</span>
             </div>
             <div class="fleet-table-head">
                 <span></span>
@@ -522,427 +116,253 @@
             <div class="fleet-items-list" id="fleet-items-list"></div>
         </div>
 
-        <!-- ORTA: UYDU HARİTASI -->
+        <!-- ORTA HARİTA -->
         <div id="map"></div>
 
-        <!-- SAĞ: MAT TAKTİK SAĞ PANEL -->
+        <!-- SAĞ TAKTİK PANEL -->
         <div class="pfd-sidebar">
-            
-            <!-- 1. PRIMARY FLIGHT DISPLAY (PFD) -->
             <div class="pfd-container">
-                <div class="pfd-title-bar">
+                <div style="display: flex; justify-content: space-between; font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; font-weight: 700; color: var(--text-white); border-bottom: 1px solid var(--border); padding-bottom: 4px; margin-bottom: 6px;">
                     <span id="pfd-uav-id">HAVA ARACI SEÇİLMEDİ</span>
-                    <span class="pfd-angles">R:<span id="val-roll">0.0</span>° P:<span id="val-pitch">0.0</span>°</span>
+                    <span style="color: var(--c-sand);">R:<span id="val-roll">0.0</span>° P:<span id="val-pitch">0.0</span>°</span>
                 </div>
-
                 <div class="pfd-viewport">
                     <div class="horizon-disk" id="horizon-disk">
                         <div class="horizon-sky"></div>
                         <div class="horizon-ground"></div>
                     </div>
-
-                    <svg class="roll-arc-svg" viewBox="0 0 130 30">
-                        <path d="M 20 25 A 55 55 0 0 1 110 25" stroke="rgba(255,255,255,0.3)" stroke-width="1" fill="none" />
-                        <line x1="65" y1="5" x2="65" y2="10" stroke="#b89c68" stroke-width="1.5" />
-                        <line x1="48" y1="7" x2="50" y2="11" stroke="rgba(255,255,255,0.4)" stroke-width="1" />
-                        <line x1="82" y1="7" x2="80" y2="11" stroke="rgba(255,255,255,0.4)" stroke-width="1" />
-                        <line x1="32" y1="13" x2="35" y2="17" stroke="rgba(255,255,255,0.4)" stroke-width="1" />
-                        <line x1="98" y1="13" x2="95" y2="17" stroke="rgba(255,255,255,0.4)" stroke-width="1" />
-                    </svg>
-
-                    <div class="pfd-pitch-ladder">
-                        <div class="pitch-line major" style="top: calc(50% - 36px);"><span class="pitch-label left">+20</span><span class="pitch-label right">+20</span></div>
-                        <div class="pitch-line" style="top: calc(50% - 18px);"><span class="pitch-label left">+10</span><span class="pitch-label right">+10</span></div>
-                        <div class="pitch-line" style="top: calc(50% + 18px);"><span class="pitch-label left">-10</span><span class="pitch-label right">-10</span></div>
-                        <div class="pitch-line major" style="top: calc(50% + 36px);"><span class="pitch-label left">-20</span><span class="pitch-label right">-20</span></div>
-                    </div>
-
                     <div class="tape-gauge speed-tape">
-                        <div class="tape-label">IAS</div>
-                        <div class="tape-value" id="pfd-speed">--</div>
-                        <div class="tape-unit">km/h</div>
+                        <span style="font-size: 0.48rem; color: var(--text-dim);">IAS</span>
+                        <span id="pfd-speed" style="font-size: 0.85rem; font-weight: 700; color: var(--c-green);">--</span>
                     </div>
-
                     <div class="tape-gauge alt-tape">
-                        <div class="tape-label">ALT</div>
-                        <div class="tape-value" id="pfd-altitude">--</div>
-                        <div class="tape-unit">m</div>
+                        <span style="font-size: 0.48rem; color: var(--text-dim);">ALT</span>
+                        <span id="pfd-altitude" style="font-size: 0.85rem; font-weight: 700; color: var(--c-blue);">--</span>
                     </div>
-
-                    <svg class="aircraft-crosshair" viewBox="0 0 120 40">
-                        <path d="M 20 20 L 45 20 L 45 25" stroke="#b89c68" stroke-width="1.5" fill="none" />
-                        <circle cx="60" cy="20" r="2.5" fill="#b89c68" />
-                        <path d="M 75 25 L 75 20 L 100 20" stroke="#b89c68" stroke-width="1.5" fill="none" />
-                    </svg>
+                    <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 10;">
+                        <svg style="width: 90px; height: 30px;" viewBox="0 0 120 40">
+                            <path d="M 15 20 L 45 20 L 45 27" stroke="#d29922" stroke-width="2" fill="none" />
+                            <circle cx="60" cy="20" r="3" fill="#d29922" />
+                            <path d="M 75 27 L 75 20 L 105 20" stroke="#d29922" stroke-width="2" fill="none" />
+                        </svg>
+                    </div>
                 </div>
             </div>
 
-            <!-- 2. C2 UPLINK EYLEM PANELİ -->
             <div class="hud-card">
-                <div class="section-header">
-                    <span>C2 KOMUTA KONTROL</span>
-                    <span style="color: var(--c-tactical-green); font-size: 0.55rem; font-family: 'JetBrains Mono', monospace;">UPLINK HAZIR</span>
-                </div>
+                <div class="section-header"><span>C2 KOMUTA KONTROL</span></div>
                 <div class="c2-grid">
-                    <button class="c2-btn btn-rth" onclick="sendC2Command('RTH')"><i class="fa-solid fa-house"></i> RTH (ÜSSE DÖN)</button>
-                    <button class="c2-btn btn-loiter" onclick="sendC2Command('LOITER')"><i class="fa-solid fa-arrows-spin"></i> LOITER (BEKLE)</button>
-                    <button class="c2-btn btn-land" onclick="sendC2Command('LAND')"><i class="fa-solid fa-plane-arrival"></i> ACİL İNİŞ</button>
-                    <button class="c2-btn btn-resume" onclick="sendC2Command('RESUME')"><i class="fa-solid fa-play"></i> GÖREVE DEVAM</button>
+                    <button class="c2-btn" style="color: var(--c-blue);" onclick="sendC2Command('RTH')"><i class="fa-solid fa-house"></i> RTH</button>
+                    <button class="c2-btn" style="color: var(--c-sand);" onclick="sendC2Command('LOITER')"><i class="fa-solid fa-rotate"></i> LOITER</button>
+                    <button class="c2-btn" style="color: var(--c-red);" onclick="sendC2Command('LAND')"><i class="fa-solid fa-plane-slash"></i> ACİL İNİŞ</button>
+                    <button class="c2-btn" style="color: var(--c-green);" onclick="sendC2Command('RESUME')"><i class="fa-solid fa-play"></i> DEVAM</button>
                 </div>
-                <div class="c2-status-bar">
-                    <span class="c2-status-text">DURUM:</span>
-                    <span class="c2-status-val" id="c2-status-msg">İHA SEÇİMİ BEKLENİYOR</span>
+                <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-card-inner); padding: 5px 8px; border-radius: 3px; border: 1px solid var(--border); margin-top: 6px; font-size: 0.62rem; font-family: 'JetBrains Mono', monospace;">
+                    <span style="color: var(--text-dim);">DURUM:</span>
+                    <span id="c2-status-msg" style="color: var(--c-blue); font-weight: 700;">BEKLENİYOR</span>
                 </div>
             </div>
 
-            <!-- 3. TELEMETRİ VE PUSULA MATRİSİ -->
             <div class="hud-card">
-                <div class="section-header">
-                    <span>AVİYONİK VERİ</span>
-                    <span id="val-flight-status" style="color: var(--c-tactical-sand); font-size: 0.6rem; font-family: 'JetBrains Mono', monospace;">NORMAL</span>
-                </div>
+                <div class="section-header"><span>AVİYONİK VERİ & PUSULA</span></div>
                 <div class="telemetry-grid">
                     <div class="compass-box">
-                        <div class="compass-dial" id="compass-dial">
-                            <div class="compass-pointer"></div>
-                            <span style="font-size: 6px; color: var(--text-dim); position: absolute; top: 10px; font-weight: 600;">N</span>
-                            <span style="font-size: 5px; color: var(--text-dim); position: absolute; bottom: 2px;">S</span>
-                            <span style="font-size: 5px; color: var(--text-dim); position: absolute; right: 3px;">E</span>
-                            <span style="font-size: 5px; color: var(--text-dim); position: absolute; left: 3px;">W</span>
-                        </div>
-                        <div class="compass-deg"><span id="val-heading">--</span>°</div>
+                        <div class="compass-dial" id="compass-dial"><div class="compass-pointer"></div></div>
+                        <div style="font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; font-weight: 700; color: var(--c-blue); margin-top: 4px;"><span id="val-heading">--</span>°</div>
                     </div>
-
                     <div class="matrix-box">
                         <div class="matrix-cell">
-                            <div class="matrix-lbl">BATARYA</div>
-                            <div class="matrix-val"><span id="val-battery">--</span>%</div>
-                            <div class="battery-bar-container">
-                                <div class="battery-bar-fill" id="battery-progress"></div>
-                            </div>
+                            <div style="font-size: 0.52rem; color: var(--text-dim); font-weight: 600;">BATARYA</div>
+                            <div style="font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; font-weight: 700; color: #fff;"><span id="val-battery">--</span>%</div>
                         </div>
                         <div class="matrix-cell">
-                            <div class="matrix-lbl">AVİYONİK ISI</div>
-                            <div class="matrix-val"><span id="val-temp">--</span>°C</div>
+                            <div style="font-size: 0.52rem; color: var(--text-dim); font-weight: 600;">ISI</div>
+                            <div style="font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; font-weight: 700; color: #fff;"><span id="val-temp">--</span>°C</div>
                         </div>
                         <div class="matrix-cell">
-                            <div class="matrix-lbl">ENLEM (LAT)</div>
-                            <div class="matrix-val" id="val-lat" style="font-size: 0.65rem;">--</div>
+                            <div style="font-size: 0.52rem; color: var(--text-dim); font-weight: 600;">ENLEM</div>
+                            <div style="font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; font-weight: 700; color: #fff;" id="val-lat">--</div>
                         </div>
                         <div class="matrix-cell">
-                            <div class="matrix-lbl">BOYLAM (LON)</div>
-                            <div class="matrix-val" id="val-lon" style="font-size: 0.65rem;">--</div>
+                            <div style="font-size: 0.52rem; color: var(--text-dim); font-weight: 600;">BOYLAM</div>
+                            <div style="font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; font-weight: 700; color: #fff;" id="val-lon">--</div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- 4. GÜVENLİK ALARMLARI -->
             <div class="hud-card" style="flex: 1; display: flex; flex-direction: column;">
-                <div class="section-header" style="color: var(--c-tactical-red);">
-                    <span>GÜVENLİK ALARM GÜNLÜĞÜ</span>
-                </div>
+                <div class="section-header" style="color: var(--c-red);"><span>GÜVENLİK ALARM GÜNLÜĞÜ</span></div>
                 <div class="alert-box" id="alerts-container">
-                    <div style="font-size: 0.62rem; color: var(--text-dim); text-align: center; margin-top: 4px;">Aktif ihlal veya alarm yok.</div>
+                    <div style="font-size: 0.62rem; color: var(--text-dim); text-align: center; margin-top: 10px;">Aktif alarm yok.</div>
                 </div>
             </div>
-
         </div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
     <script>
-        function updateTacticalClock() {
+        setInterval(() => {
             const now = new Date();
-            const h = String(now.getUTCHours()).padStart(2, '0');
-            const m = String(now.getUTCMinutes()).padStart(2, '0');
-            const s = String(now.getUTCSeconds()).padStart(2, '0');
-            document.getElementById('top-clock').innerText = `${h}:${m}:${s}`;
-        }
-        setInterval(updateTacticalClock, 1000);
-        updateTacticalClock();
+            document.getElementById('top-clock').innerText = String(now.getUTCHours()).padStart(2, '0') + ":" + String(now.getUTCMinutes()).padStart(2, '0') + ":" + String(now.getUTCSeconds()).padStart(2, '0');
+        }, 1000);
 
         const map = L.map('map', { attributionControl: false }).setView([40.7350, 30.0833], 9);
-
-        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-            maxZoom: 18
-        }).addTo(map);
-
-        L.circle([40.7350, 30.0833], {
-            radius: 45000,
-            color: '#6c94b8',
-            weight: 1,
-            dashArray: '4, 6',
-            fillColor: '#6c94b8',
-            fillOpacity: 0.03
-        }).addTo(map);
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 18 }).addTo(map);
 
         const activeUAVs = {};
         let selectedUavId = null;
 
-        const MIL_COLORS = {
-            Dost: '#6c94b8',
-            Secili: '#b89c68',
-            Alarm: '#9e4444'
+        const ws = new WebSocket(`ws://${window.location.host}/ws/telemetry`);
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.type === 'ALERT') {
+                handleAlert(data);
+            } else if (data.uav_id) {
+                handleTelemetry(data);
+                if (data.status === 'CRITICAL' || data.status === 'WARNING' || data.has_alert) {
+                    handleAlert({
+                        uav_id: data.uav_id,
+                        alert_type: data.status || 'WARNING',
+                        message: `${data.uav_id} kritik eşikte! İrtifa: ${Math.round(data.altitude)}m, Batarya: %${data.battery}`,
+                        timestamp: data.timestamp || new Date().toISOString()
+                    });
+                }
+            }
         };
 
-        function getUavColor(uav_id, hasAlert) {
-            if (uav_id === selectedUavId) return MIL_COLORS.Secili;
-            return hasAlert ? MIL_COLORS.Alarm : MIL_COLORS.Dost;
-        }
+        let latestFleetData = {};
+        let isRenderQueued = false;
 
-        async function sendC2Command(commandType) {
-            if (!selectedUavId) {
-                alert("Lütfen önce sol listeden bir İHA seçin!");
-                return;
-            }
-
-            const statusBanner = document.getElementById('c2-status-msg');
-            statusBanner.innerText = `${commandType} İLETİLİYOR...`;
-            statusBanner.style.color = MIL_COLORS.Secili;
-
-            try {
-                const response = await fetch('/api/v1/commands/send', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        uav_id: selectedUavId,
-                        command_type: commandType,
-                        parameters: {}
-                    })
-                });
-
-                const result = await response.json();
-                if (response.ok) {
-                    statusBanner.innerText = `[ONAYLANDI] ${commandType}`;
-                    statusBanner.style.color = "var(--c-tactical-green)";
-                } else {
-                    statusBanner.innerText = `[HATA] ${result.detail}`;
-                    statusBanner.style.color = "var(--c-tactical-red)";
-                }
-            } catch (err) {
-                statusBanner.innerText = `[BAĞLANTI HATASI]`;
-                statusBanner.style.color = "var(--c-tactical-red)";
-            }
-        }
-
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${protocol}//${window.location.host}/ws/telemetry`;
-
-        function connectWebSocket() {
-            const socket = new WebSocket(wsUrl);
-            const badge = document.getElementById('connection-status');
-            const statusText = document.getElementById('connection-text');
-
-            socket.onopen = () => {
-                badge.classList.add('connected');
-                statusText.innerText = 'C2 & TELEMETRİ AKTİF';
-            };
-
-            socket.onmessage = (event) => {
-                const packet = JSON.parse(event.data);
-                if (packet.type === "TELEMETRY" || (packet.uav_id && !packet.type)) {
-                    handleIncomingTelemetry(packet);
-                } else if (packet.type === "ALERT") {
-                    handleIncomingAlert(packet);
-                }
-            };
-
-            socket.onclose = () => {
-                badge.classList.remove('connected');
-                statusText.innerText = 'BAĞLANTI KESİLDİ';
-                setTimeout(connectWebSocket, 2000);
-            };
-        }
-
-        function handleIncomingTelemetry(data) {
+        function handleTelemetry(data) {
             const id = data.uav_id;
-            const now = Date.now();
-            const latLng = [data.latitude, data.longitude];
-            const hasAlert = data.status === "CRITICAL" || data.status === "WARNING";
-            const color = getUavColor(id, hasAlert);
+            latestFleetData[id] = data;
 
-            if (!activeUAVs[id]) {
-                const path = L.polyline([latLng], { color: color, weight: 1.2, opacity: 0.5, dashArray: '2, 4' }).addTo(map);
+            if (!isRenderQueued) {
+                isRenderQueued = true;
+                requestAnimationFrame(() => {
+                    flushFleetUpdates();
+                    isRenderQueued = false;
+                });
+            }
+        }
 
-                const uavIcon = L.divIcon({
-                    className: `uav-icon-${id}`,
-                    html: `<div id="icon-${id}" style="transform: rotate(0deg); transition: transform 0.3s ease; color: ${color}; font-size: 14px;">
-                             <i class="fa-solid fa-jet-fighter"></i>
-                           </div>`,
-                    iconSize: [16, 16],
-                    iconAnchor: [8, 8]
+        function flushFleetUpdates() {
+            Object.keys(latestFleetData).keys ? Object.keys(latestFleetData).forEach(id => {
+                const data = latestFleetData[id];
+                
+                if (data.latitude == null || data.longitude == null || isNaN(data.latitude) || isNaN(data.longitude)) {
+                    return;
+                }
+
+                const latLng = [data.latitude, data.longitude];
+                const hasAlert = data.status === "CRITICAL" || data.status === "WARNING" || data.has_alert;
+                const isSelected = id === selectedUavId;
+                const color = isSelected ? '#d29922' : (hasAlert ? '#f85149' : '#58a6ff');
+                const heading = data.heading || 0;
+
+                // 1) İKON BOYUTU BÜYÜTÜLDÜ (28px ve net görünüm)
+                const customIcon = L.divIcon({
+                    className: 'custom-uav-marker',
+                    html: `<div style="transform: rotate(${heading - 45}deg); color: ${color}; font-size: 26px; text-shadow: 0 0 6px rgba(0,0,0,0.9); transition: transform 0.2s linear;">✈</div>`,
+                    iconSize: [32, 32],
+                    iconAnchor: [16, 16]
                 });
 
-                const marker = L.marker(latLng, { icon: uavIcon })
-                    .bindTooltip(id, { permanent: false, className: 'plane-label', direction: 'top' })
-                    .addTo(map)
-                    .on('click', () => selectUav(id));
-
-                activeUAVs[id] = { marker, path, data, lastSeen: now, hasAlert };
-                if (!selectedUavId) selectUav(id);
-                renderFleetList();
-            } else {
-                const uav = activeUAVs[id];
-                uav.data = data;
-                uav.lastSeen = now;
-                uav.marker.setLatLng(latLng);
-                uav.path.addLatLng(latLng);
-                uav.hasAlert = hasAlert;
-
-                const iconElement = document.getElementById(`icon-${id}`);
-                if (iconElement) {
-                    iconElement.style.color = getUavColor(id, hasAlert);
-                    if (data.heading !== undefined) iconElement.style.transform = `rotate(${data.heading - 45}deg)`;
+                if (!activeUAVs[id]) {
+                    const path = L.polyline([latLng], { color: color, weight: 1.5, opacity: 0.7 }).addTo(map);
+                    const marker = L.marker(latLng, { icon: customIcon }).addTo(map).on('click', () => selectUav(id));
+                    activeUAVs[id] = { marker, path, data };
+                    if (!selectedUavId) selectUav(id);
+                } else {
+                    // 2) HAREKET SORUNU ÇÖZÜLDÜ: Marker konumu ve rota her pakette güncelleniyor
+                    activeUAVs[id].data = data;
+                    activeUAVs[id].marker.setLatLng(latLng);
+                    activeUAVs[id].marker.setIcon(customIcon);
+                    activeUAVs[id].path.addLatLng(latLng);
                 }
-
-                const altBadge = document.getElementById(`alt-badge-${id}`);
-                if (altBadge) altBadge.innerText = `${data.altitude.toFixed(0)}m`;
-
-                const modBadge = document.getElementById(`mod-badge-${id}`);
-                if (modBadge) modBadge.innerText = data.status === "NORMAL" ? "NAV" : data.status.substring(0, 3);
-            }
-
-            if (selectedUavId === id) updatePFDandUI(data);
+                if (selectedUavId === id) updateUI(data);
+            }) : null;
+            renderFleet();
         }
 
-        function updatePFDandUI(data) {
-            document.getElementById('pfd-uav-id').innerText = data.uav_id;
-            document.getElementById('pfd-speed').innerText = data.speed !== undefined ? data.speed.toFixed(0) : '--';
-            document.getElementById('pfd-altitude').innerText = data.altitude !== undefined ? data.altitude.toFixed(0) : '--';
-
-            const roll = data.roll || 0.0;
-            const pitch = data.pitch || 0.0;
-            document.getElementById('val-roll').innerText = roll.toFixed(1);
-            document.getElementById('val-pitch').innerText = pitch.toFixed(1);
-
-            const horizonDisk = document.getElementById('horizon-disk');
-            if (horizonDisk) {
-                horizonDisk.style.transform = `rotate(${-roll}deg) translateY(${pitch * 1.8}px)`;
-            }
-
-            const heading = data.heading || 0.0;
-            document.getElementById('val-heading').innerText = heading.toFixed(0);
-            const compassDial = document.getElementById('compass-dial');
-            if (compassDial) compassDial.style.transform = `rotate(${-heading}deg)`;
-
-            document.getElementById('val-battery').innerText = data.battery !== undefined ? data.battery.toFixed(1) : '--';
-            document.getElementById('val-temp').innerText = data.temperature !== undefined ? data.temperature.toFixed(1) : '--';
-            document.getElementById('val-flight-status').innerText = data.status || "NORMAL";
-
-            document.getElementById('val-lat').innerText = data.latitude !== undefined ? data.latitude.toFixed(5) : '--';
-            document.getElementById('val-lon').innerText = data.longitude !== undefined ? data.longitude.toFixed(5) : '--';
-
-            const batteryFill = document.getElementById('battery-progress');
-            if (batteryFill) {
-                batteryFill.style.width = `${data.battery}%`;
-                batteryFill.style.backgroundColor = data.battery < 20 ? MIL_COLORS.Alarm : (data.battery < 50 ? MIL_COLORS.Secili : 'var(--c-tactical-green)');
-            }
-        }
-
-        function handleIncomingAlert(alert) {
+        function handleAlert(alert) {
             const container = document.getElementById('alerts-container');
-            if (container.children.length === 1 && (container.innerText.includes("Aktif ihlal") || container.innerText.includes("Aktif alarm"))) {
-                container.innerHTML = '';
-            }
-
-            const alertCard = document.createElement('div');
-            alertCard.className = 'alert-card';
-            alertCard.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
-                    <span style="color: var(--c-tactical-red); font-weight: 700;">[${alert.alert_type}] ${alert.uav_id}</span>
-                    <span style="font-size: 0.55rem; color: var(--text-dim);">${new Date(alert.timestamp).toLocaleTimeString()}</span>
-                </div>
-                <div style="color: var(--text-main); font-weight: 400; font-size: 0.62rem;">${alert.message}</div>
-            `;
-
-            container.prepend(alertCard);
-            if (container.children.length > 8) container.removeChild(container.lastChild);
-
-            const item = document.getElementById(`fleet-row-${alert.uav_id}`);
-            if (item) item.classList.add('has-alert');
+            if (container.innerText.includes("Aktif alarm")) container.innerHTML = '';
+            
+            const card = document.createElement('div');
+            card.className = 'alert-card';
+            const timeStr = alert.timestamp ? new Date(alert.timestamp).toLocaleTimeString() : new Date().toLocaleTimeString();
+            card.innerHTML = `<div style="display:flex; justify-content:space-between; color:#f85149; font-weight:700;"><span>[${alert.alert_type || 'ALERT'}] ${alert.uav_id}</span><span style="color:#8b949e; font-size:0.52rem;">${timeStr}</span></div><div style="color:#c9d1d9; margin-top:3px;">${alert.message}</div>`;
+            container.prepend(card);
         }
 
-        setInterval(() => {
-            const now = Date.now();
-            let listChanged = false;
-
-            for (const [id, uav] of Object.entries(activeUAVs)) {
-                if (now - uav.lastSeen > 6000) {
-                    map.removeLayer(uav.marker);
-                    map.removeLayer(uav.path);
-                    delete activeUAVs[id];
-                    listChanged = true;
-
-                    if (selectedUavId === id) {
-                        selectedUavId = Object.keys(activeUAVs)[0] || null;
-                        if (selectedUavId) selectUav(selectedUavId);
-                        else clearSidebarUI();
-                    }
-                }
-            }
-            if (listChanged) renderFleetList();
-        }, 2000);
-
-        function renderFleetList() {
-            const listContainer = document.getElementById('fleet-items-list');
-            const uavIds = Object.keys(activeUAVs);
-            document.getElementById('fleet-count').innerText = `${uavIds.length} ARAÇ`;
-
-            listContainer.innerHTML = '';
-            uavIds.sort().forEach(id => {
+        function renderFleet() {
+            const list = document.getElementById('fleet-items-list');
+            list.innerHTML = '';
+            const ids = Object.keys(activeUAVs);
+            document.getElementById('fleet-count').innerText = ids.length + " ARAÇ";
+            
+            ids.forEach(id => {
                 const uav = activeUAVs[id];
+                const isSelected = selectedUavId === id;
+                const hasAlert = uav.data.status === "CRITICAL" || uav.data.status === "WARNING" || uav.data.has_alert;
+                
                 const row = document.createElement('div');
-                row.className = `fleet-row ${selectedUavId === id ? 'active' : ''} ${uav.hasAlert ? 'has-alert' : ''}`;
-                row.id = `fleet-row-${id}`;
+                row.className = `fleet-row ${isSelected ? 'active' : ''} ${hasAlert ? 'has-alert' : ''}`;
                 row.onclick = () => selectUav(id);
-
-                const statusShort = uav.data.status === "NORMAL" ? "NAV" : uav.data.status.substring(0, 3);
-                const isWarn = uav.hasAlert;
-
+                
+                const iconColor = isSelected ? '#d29922' : (hasAlert ? '#f85149' : '#58a6ff');
                 row.innerHTML = `
-                    <div class="row-icon" style="color: ${getUavColor(id, uav.hasAlert)};"><i class="fa-solid fa-plane"></i></div>
-                    <div class="row-id" title="${id}">${id}</div>
-                    <div class="row-alt" id="alt-badge-${id}">${uav.data.altitude.toFixed(0)}m</div>
-                    <div class="row-status ${isWarn ? 'warn' : ''}" id="mod-badge-${id}">${statusShort}</div>
+                    <i class="fa-solid fa-plane" style="color: ${iconColor};"></i>
+                    <span style="font-family:'JetBrains Mono'; font-weight:${isSelected ? 700 : 500}; color:${isSelected ? '#f0f6fc' : '#c9d1d9'}">${id}</span>
+                    <span style="font-family:'JetBrains Mono'; text-align:right; color:var(--text-dim);">${Math.round(uav.data.altitude)}m</span>
+                    <span style="font-family:'JetBrains Mono'; text-align:center; font-size:0.58rem; background:${hasAlert ? '#3b1c1c' : '#1a2230'}; color:${hasAlert ? '#f85149' : '#58a6ff'}; padding:2px; border-radius:2px; font-weight:700;">${uav.data.status === 'NORMAL' ? 'NAV' : (uav.data.status ? uav.data.status.substring(0,3) : 'NAV')}</span>
                 `;
-                listContainer.appendChild(row);
+                list.appendChild(row);
             });
         }
 
         function selectUav(id) {
-            if (!activeUAVs[id]) return;
             selectedUavId = id;
-            document.querySelectorAll('.fleet-row').forEach(el => el.classList.remove('active'));
-            const activeItem = document.getElementById(`fleet-row-${id}`);
-            if (activeItem) activeItem.classList.add('active');
-
-            document.getElementById('c2-status-msg').innerText = `${id} BAĞLANDI`;
-            document.getElementById('c2-status-msg').style.color = "var(--c-tactical-blue)";
-
-            updatePFDandUI(activeUAVs[id].data);
-            map.panTo([activeUAVs[id].data.latitude, activeUAVs[id].data.longitude], { animate: true, duration: 0.6 });
-            renderFleetList();
+            renderFleet();
+            if (activeUAVs[id]) {
+                map.panTo([activeUAVs[id].data.latitude, activeUAVs[id].data.longitude]);
+                updateUI(activeUAVs[id].data);
+            }
         }
 
-        function clearSidebarUI() {
-            document.getElementById('pfd-uav-id').innerText = 'HAVA ARACI SEÇİLMEDİ';
-            document.getElementById('pfd-speed').innerText = '--';
-            document.getElementById('pfd-altitude').innerText = '--';
-            document.getElementById('val-roll').innerText = '0.0';
-            document.getElementById('val-pitch').innerText = '0.0';
-            document.getElementById('val-heading').innerText = '--';
-            document.getElementById('val-battery').innerText = '--';
-            document.getElementById('val-temp').innerText = '--';
-            document.getElementById('val-lat').innerText = '--';
-            document.getElementById('val-lon').innerText = '--';
-            document.getElementById('val-flight-status').innerText = '--';
-            document.getElementById('battery-progress').style.width = '0%';
-            document.getElementById('c2-status-msg').innerText = 'İHA SEÇİMİ BEKLENİYOR';
+        function updateUI(data) {
+            document.getElementById('pfd-uav-id').innerText = data.uav_id;
+            document.getElementById('pfd-speed').innerText = Math.round(data.speed || 0);
+            document.getElementById('pfd-altitude').innerText = Math.round(data.altitude || 0);
+            document.getElementById('val-roll').innerText = (data.roll || 0).toFixed(1);
+            document.getElementById('val-pitch').innerText = (data.pitch || 0).toFixed(1);
+            document.getElementById('val-heading').innerText = Math.round(data.heading || 0);
+            document.getElementById('val-battery').innerText = (data.battery || 0).toFixed(1);
+            document.getElementById('val-temp').innerText = (data.temperature || 0).toFixed(1);
+            document.getElementById('val-lat').innerText = (data.latitude || 0).toFixed(4);
+            document.getElementById('val-lon').innerText = (data.longitude || 0).toFixed(4);
+            
+            document.getElementById('horizon-disk').style.transform = `rotate(${-(data.roll || 0)}deg) translateY(${(data.pitch || 0) * 1.8}px)`;
+            document.getElementById('compass-dial').style.transform = `rotate(${-(data.heading || 0)}deg)`;
         }
 
-        connectWebSocket();
+        async function sendC2Command(type) {
+            if (!selectedUavId) return;
+            document.getElementById('c2-status-msg').innerText = type + " İLETİLİYOR...";
+            try {
+                const res = await fetch('/api/v1/commands/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ uav_id: selectedUavId, command_type: type, parameters: {} })
+                });
+                if (res.ok) document.getElementById('c2-status-msg').innerText = `[ONAYLANDI] ${type}`;
+                else document.getElementById('c2-status-msg').innerText = `[REDDEDİLDİ]`;
+            } catch {
+                document.getElementById('c2-status-msg').innerText = `[BAĞLANTI HATASI]`;
+            }
+        }
     </script>
 </body>
 </html>
